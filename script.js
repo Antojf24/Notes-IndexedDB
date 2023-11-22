@@ -12,7 +12,7 @@ let db = null;
 
 let counter = 1;
 
-function addNewNote() {
+function addNewNote(text) {
 
     let id = counter;
 
@@ -29,7 +29,7 @@ function addNewNote() {
             </div>
         </div>
         <div class="noteContent">
-            <textarea class="noteText"></textarea>
+            <textarea class="noteText">${text != "[object PointerEvent]" ? text : ""}</textarea>
         </div>
     `;
 
@@ -52,6 +52,44 @@ function addNewNote() {
     container.appendChild(note);
 
     counter++;
+};
+
+function showNewNote(text) {
+
+    let id = counter;
+
+    const note = document.createElement("div");
+
+    note.className = "note";
+    note.innerHTML = `
+        <div class="noteHeader">
+            <div class="icons">
+                <div class="icon red"></div>
+                <div class="icon orange"></div>
+                <div class="icon green"></div>
+                <input type="hidden" class="id" value="${id}"/>
+            </div>
+        </div>
+        <div class="noteContent">
+            <textarea class="noteText">${text != "[object PointerEvent]" ? text : ""}</textarea>
+        </div>
+    `;
+
+    const deleteNote = note.querySelector('.red');
+    deleteNote.addEventListener('click', () => {
+
+        removeNote(id);
+        note.remove();
+    });
+
+    const noteText = note.querySelector('.noteText');
+
+    noteText.addEventListener('blur', () => {
+
+        updateNote(id, noteText.value);
+    });
+
+    container.appendChild(note);
 };
 
 function deleteAllNotes() {
@@ -99,12 +137,12 @@ function openDB() {
     });
 }
 
-function addNote(data){
+function addNote(data) {
 
     openDB()
         .then(() => {
 
-            data = {"note": data};
+            data = { "note": data };
             addData(data)
                 .catch((error) => {
 
@@ -120,24 +158,24 @@ function addNote(data){
 function addData(data) {
     if (!db) {
 
-      throw new Error("La base de datos no está abierta.");
+        throw new Error("La base de datos no está abierta.");
     }
-  
+
     return new Promise((resolve, reject) => {
 
-      let transaction = db.transaction([STORE_NAME], "readwrite");
-      let objectStore = transaction.objectStore(STORE_NAME);
-      let request = objectStore.add(data);
+        let transaction = db.transaction([STORE_NAME], "readwrite");
+        let objectStore = transaction.objectStore(STORE_NAME);
+        let request = objectStore.add(data);
 
-      request.onsuccess = (event) => {
+        request.onsuccess = (event) => {
 
-        resolve();
-      };
-  
-      request.onerror = (event) => {
+            resolve();
+        };
 
-        reject(event.target.error);
-      };
+        request.onerror = (event) => {
+
+            reject(event.target.error);
+        };
     });
 };
 
@@ -177,31 +215,60 @@ function updateNote(id, data) {
         };
     });
 }
-function removeNote(id){
+function removeNote(id) {
 
     if (!db) {
 
         throw new Error("La base de datos no está abierta.");
-      }
-    
-      return new Promise((resolve, reject) => {
-  
+    }
+
+    return new Promise((resolve, reject) => {
+
         let transaction = db.transaction([STORE_NAME], "readwrite");
         let objectStore = transaction.objectStore(STORE_NAME);
         let request = objectStore.delete(id);
-  
+
         request.onsuccess = (event) => {
-  
-          resolve();
+
+            resolve();
         };
-    
+
         request.onerror = (event) => {
-  
-          reject(event.target.error);
+
+            reject(event.target.error);
         };
     });
 }
 
-function showNotes(){
+function showNotes() {
 
+    if (!db) {
+
+        throw new Error("La base de datos no está abierta.");
+    }
+
+    return new Promise((resolve, reject) => {
+        let transaction = db.transaction([STORE_NAME], "readwrite");
+        let objectStore = transaction.objectStore(STORE_NAME);
+        let request = objectStore.getAll();
+        request.onsuccess = (event) => {
+            let notes = event.target.result;
+
+            notes.forEach(note => {
+
+                showNewNote(note.note);
+            })
+
+            resolve();
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
 }
+
+openDB().then(() => {
+
+    showNotes();
+})
